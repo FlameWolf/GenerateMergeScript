@@ -84,7 +84,7 @@ internal class Program
 			{
 				strBuild.AppendLine($"\tT.{columnName} = S.{columnName},");
 			}
-			strBuild.Length -= 3;
+			strBuild.RemoveTrailingCommaNewLine();
 			strBuild.AppendLine("\nWHEN NOT MATCHED BY TARGET THEN");
 			strBuild.AppendLine($"\tINSERT ({string.Join(", ", columnsExcludingKey)})");
 			strBuild.AppendLine($"\tVALUES ({string.Join(", ", columnsExcludingKey.Select(c => $"S.{c}"))});");
