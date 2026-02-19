@@ -7,6 +7,7 @@ namespace GenerateMergeScript;
 
 internal class Program
 {
+	const string nullString = "NULL";
 	static readonly string connectionString = @"";
 	static readonly string tableName = "";
 	static readonly string whereClause = "";
@@ -61,11 +62,11 @@ internal class Program
 					var value = sqlRead.GetValue(i);
 					columnValues.Add(value switch
 					{
-						DBNull => "NULL",
+						DBNull => nullString,
 						bool boolValue => boolValue ? "1" : "0",
 						DateTime dateValue => $"{ConvertDateToString(dateValue)}",
 						string stringValue => $"'{stringValue.Replace("'", "''")}'",
-						_ => value?.ToString() ?? string.Empty
+						_ => value?.ToString() ?? nullString
 					});
 				}
 				strBuild.AppendLine($"\t\t({string.Join(", ", columnValues)}),");
