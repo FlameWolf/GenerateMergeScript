@@ -7,33 +7,33 @@ namespace GenerateMergeScript;
 
 internal class Program
 {
-	const string nullString = "NULL";
-	static readonly string connectionString = @"";
-	static readonly string tableName = "";
-	static readonly string whereClause = "";
-	static readonly DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+	private const string DB_NULL = "NULL";
+	private const string CONNECTION_STRING = @"";
+	private const string TABLE_NAME = "";
+	private const string WHERE_CLAUSE = "";
+	private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-	static string ConvertDateToString(DateTime input)
+	private static string ConvertDateToString(DateTime input)
 	{
-		if (DateOnly.FromDateTime(input) == today)
+		if (DateOnly.FromDateTime(input) == Today)
 		{
 			return "GETUTCDATE()";
 		}
-		return $"'{input:yyyy-MM-dd}'";
+		return $"'{input:yyyy-MM-dd HH:mm:ss.fff}'";
 	}
 
-	static async Task Main(string[] args)
+	public static async Task Main(string[] args)
 	{
-		using var sqlConn = new SqlConnection(connectionString);
+		using var sqlConn = new SqlConnection(CONNECTION_STRING);
 		var sqlCmd = new SqlCommand
 		(
-			string.IsNullOrWhiteSpace(whereClause) ?
-				$"SELECT * FROM {tableName}" :
-				$"SELECT * FROM {tableName} WHERE {whereClause}",
+			string.IsNullOrWhiteSpace(WHERE_CLAUSE) ?
+				$"SELECT * FROM {TABLE_NAME}" :
+				$"SELECT * FROM {TABLE_NAME} WHERE {WHERE_CLAUSE}",
 			sqlConn
 		);
 		var strBuild = new StringBuilder();
-		strBuild.AppendLine($"MERGE {tableName} AS T");
+		strBuild.AppendLine($"MERGE {TABLE_NAME} AS T");
 		strBuild.AppendLine("USING");
 		strBuild.AppendLine("(");
 		strBuild.AppendLine("\tSELECT * FROM");
@@ -62,17 +62,16 @@ internal class Program
 					var value = sqlRead.GetValue(i);
 					columnValues.Add(value switch
 					{
-						DBNull => nullString,
+						DBNull => DB_NULL,
 						bool boolValue => boolValue ? "1" : "0",
 						DateTime dateValue => $"{ConvertDateToString(dateValue)}",
 						string stringValue => $"'{stringValue.Replace("'", "''")}'",
-						_ => value?.ToString() ?? nullString
+						_ => value?.ToString() ?? DB_NULL
 					});
 				}
 				strBuild.AppendLine($"\t\t({string.Join(", ", columnValues)}),");
 			}
-			strBuild.Length -= 3;
-			strBuild.AppendLine();
+			strBuild.RemoveCommaBeforeLastNewLine();
 			strBuild.AppendLine("\t)");
 			strBuild.Append("\tAS [SourceTable] (");
 			strBuild.Append($"{string.Join(", ", columnNames)}");
@@ -84,8 +83,8 @@ internal class Program
 			{
 				strBuild.AppendLine($"\tT.{columnName} = S.{columnName},");
 			}
-			strBuild.RemoveTrailingCommaNewLine();
-			strBuild.AppendLine("\nWHEN NOT MATCHED BY TARGET THEN");
+			strBuild.RemoveCommaBeforeLastNewLine();
+			strBuild.AppendLine("WHEN NOT MATCHED BY TARGET THEN");
 			strBuild.AppendLine($"\tINSERT ({string.Join(", ", columnsExcludingKey)})");
 			strBuild.AppendLine($"\tVALUES ({string.Join(", ", columnsExcludingKey.Select(c => $"S.{c}"))});");
 			Console.WriteLine(strBuild.ToString());
